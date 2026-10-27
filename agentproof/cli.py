@@ -5,6 +5,7 @@ import subprocess
 from pathlib import Path
 
 from .diff import inspect_changes
+from .commits import compare_commits
 
 
 def run_check(command, cwd, timeout=120):
@@ -29,14 +30,16 @@ def inspect_repository(root):
     return {'directory': str(root), 'git_status': git}
 
 
-def check(root, test_command=None, timeout=120):
+def check(root, test_command=None, timeout=120, base=None, head='HEAD'):
     """Test execution is opt-in; change inspection is read-only."""
-    report = {'tool': 'AgentProof', 'version': '0.2.0',
+    report = {'tool': 'AgentProof', 'version': '0.3.0',
               'repository': inspect_repository(root), 'checks': {}}
     try:
         report['changes'] = inspect_changes(root)
     except (ValueError, OSError, subprocess.TimeoutExpired) as exc:
         report['changes'] = {'status': 'unavailable', 'reason': type(exc).__name__}
+    if base:
+        report['commit_comparison'] = compare_commits(root, base, head)
     if test_command:
         report['checks']['tests'] = run_check(test_command, Path(root).resolve(), timeout)
     else:
@@ -52,6 +55,8 @@ def main(argv=None):
     parser.add_argument('path', nargs='?', default='.', help='Local project directory')
     parser.add_argument('--test', nargs=argparse.REMAINDER, help='Explicit test command; put this option last')
     parser.add_argument('--timeout', type=int, default=120, help='Test timeout in seconds (default: 120)')
+    parser.add_argument('--base', help='Compare committed changes from this Git revision')
+    parser.add_argument('--head', default='HEAD', help='Comparison end revision (default HEAD)')
     parser.add_argument('--json', action='store_true', help='Print machine-readable JSON')
     args = parser.parse_args(argv)
     if args.timeout < 1 or args.timeout > 3600:
@@ -59,7 +64,7 @@ def main(argv=None):
     if args.test is not None and not args.test:
         parser.error('--test requires a command')
     try:
-        report = check(args.path, args.test, args.timeout)
+        report = check(args.path, args.test, args.timeout, args.base, args.head)
     except ValueError as exc:
         parser.error(str(exc))
     if args.json:
@@ -74,6 +79,15 @@ def main(argv=None):
             print(f"  {item['path']}")
             for hint in item['review_hints']:
                 print(f"    REVIEW: {hint}")
+        if 'commit_comparison' in report:
+            comparison = report['commit_comparison']
+            print(f"Committed changes: {comparison['changed_file_count']} files")
+            for item in comparison['files']:
+                print(f"  {item['path']}")
+                for hint in item['review_hints']:
+                    print(f"    REVIEW: {hint}")
+                for line in item['added_lines'][:5]:
+                    print(f"    +{line['line']}: {line['preview']}")
         for name, result in report['checks'].items():
             print(f"{name}: {result['status']}")
             if result.get('output'):
