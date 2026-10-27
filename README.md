@@ -8,7 +8,8 @@ AgentProof is an early Python command-line tool for evidence-based checks of loc
 
 ## MVP features
 
-- Inspect Git working-tree status without changing files.\n- Inventory staged, unstaged and untracked local files, with explainable filename-based review hints (CI, authentication, secrets, migrations and payments).
+- Inspect Git working-tree status without changing files.
+- Inventory staged, unstaged and untracked local files, with explainable filename-based review hints (CI, authentication, secrets, migrations and payments).
 - Run a test command **only when explicitly supplied**.
 - Return pass/fail/skip status, bounded command output, and optional JSON.
 - Enforce timeouts and exit non-zero when verification fails or is skipped.
@@ -36,7 +37,9 @@ Inspect local changes without running tests:
 python -m agentproof .
 ```
 
-This reports local changed files and any filename-based review hints. It returns `not_verified` and exits with code 2 because no test was executed.\n\n**Scope:** This inventory covers local working-tree changes, not committed differences between branches. Hints are prompts for human review, **not verified vulnerabilities**.
+This reports local changed files and any filename-based review hints. It returns `not_verified` and exits with code 2 because no test was executed.
+
+**Scope:** This inventory covers local working-tree changes, not committed differences between branches. Hints are prompts for human review, **not verified vulnerabilities**.
 
 ## Run development tests
 
