@@ -10,6 +10,7 @@ AgentProof is an early Python command-line tool for evidence-based checks of loc
 
 - Inspect Git working-tree status without changing files.
 - Inventory staged, unstaged and untracked local files, with explainable filename-based review hints (CI, authentication, secrets, migrations and payments).
+- Compare two commits with `--base` and `--head`, returning changed filenames, bounded added-line previews and explainable review hints.
 - Run a test command **only when explicitly supplied**.
 - Return pass/fail/skip status, bounded command output, and optional JSON.
 - Enforce timeouts and exit non-zero when verification fails or is skipped.
@@ -41,6 +42,15 @@ This reports local changed files and any filename-based review hints. It returns
 
 **Scope:** This inventory covers local working-tree changes, not committed differences between branches. Hints are prompts for human review, **not verified vulnerabilities**.
 
+## Compare committed changes
+
+```bash
+python -m agentproof . --base HEAD~1 --head HEAD
+python -m agentproof . --base HEAD~1 --json
+```
+
+This reports added-line previews (up to 25 per file, 160 characters per line) and filename-based review prompts. **Diff previews can include credentials or sensitive code; avoid sharing JSON reports publicly without checking them.** The comparison currently omits deleted-file evidence and limits Git diff output to 1 MB. The verdict is still based on the explicitly supplied test command, not review hints.
+
 ## Run development tests
 
 ```bash
@@ -55,7 +65,7 @@ Test commands execute with your current user permissions. Only run tests from tr
 
 ## Roadmap
 
-1. Git diff summaries and change-risk indicators.
+1. Expand diff analysis to deletions, rename detection and evidence-based risk rules.
 2. Safe opt-in static checks.
 3. Optional LLM review with file/line evidence.
 4. Claude Code integration and specialist reviewers.
