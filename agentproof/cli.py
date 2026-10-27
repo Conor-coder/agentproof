@@ -2,12 +2,13 @@
 import argparse
 import json
 import subprocess
-import sys
 from pathlib import Path
+
+from .diff import inspect_changes
 
 
 def run_check(command, cwd, timeout=120):
-    """Execute a configured command without invoking a shell."""
+    """Execute an explicitly configured command without invoking a shell."""
     try:
         result = subprocess.run(command, cwd=cwd, capture_output=True, text=True,
                                 timeout=timeout, check=False)
@@ -29,9 +30,13 @@ def inspect_repository(root):
 
 
 def check(root, test_command=None, timeout=120):
-    """Checks are opt-in: never run untrusted project code automatically."""
-    report = {'tool': 'AgentProof', 'version': '0.1.0',
+    """Test execution is opt-in; change inspection is read-only."""
+    report = {'tool': 'AgentProof', 'version': '0.2.0',
               'repository': inspect_repository(root), 'checks': {}}
+    try:
+        report['changes'] = inspect_changes(root)
+    except (ValueError, OSError, subprocess.TimeoutExpired) as exc:
+        report['changes'] = {'status': 'unavailable', 'reason': type(exc).__name__}
     if test_command:
         report['checks']['tests'] = run_check(test_command, Path(root).resolve(), timeout)
     else:
@@ -63,6 +68,12 @@ def main(argv=None):
         print(f"AgentProof v{report['version']} | {report['verdict'].upper()}")
         print(f"Directory: {report['repository']['directory']}")
         print(f"Git status: {report['repository']['git_status']['status']}")
+        changes = report['changes']
+        print(f"Changed files: {changes.get('changed_file_count', 'unavailable')}")
+        for item in changes.get('files', []):
+            print(f"  {item['path']}")
+            for hint in item['review_hints']:
+                print(f"    REVIEW: {hint}")
         for name, result in report['checks'].items():
             print(f"{name}: {result['status']}")
             if result.get('output'):
